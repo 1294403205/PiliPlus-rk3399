@@ -34,12 +34,17 @@ jobs:
             pkg-config
         shell: bash
 
-      - name: Setup flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          flutter-version-file: pubspec.yaml
-          cache: true
+      # Flutter 官方不提供 Linux arm64 的 SDK tarball（releases_linux.json 只有 x64），
+      # 但 arm64 引擎产物是发布了的。在 arm64 主机上 clone flutter/flutter 后，
+      # bin/flutter 会自动下载对应架构的 Dart SDK 与引擎。
+      - name: Setup flutter (arm64 host)
+        shell: bash
+        run: |
+          git clone --depth 1 --branch 3.47.7 \
+            https://github.com/flutter/flutter.git "$HOME/flutter"
+          echo "$HOME/flutter/bin" >> "$GITHUB_PATH"
+          echo "FLUTTER_ROOT=$HOME/flutter" >> "$GITHUB_ENV"
+          "$HOME/flutter/bin/flutter" --version
 
       - name: Set and Extract version
         shell: pwsh
