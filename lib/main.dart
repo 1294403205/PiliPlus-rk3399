@@ -318,31 +318,18 @@ class MyApp extends StatelessWidget {
   }
 
   static Widget _builder(BuildContext context, Widget? child) {
-    final uiScale = Pref.uiScale;
-    final mediaQuery = MediaQuery.of(context);
-    final textScaler = TextScaler.linear(Pref.defaultTextScale);
-    if (uiScale != 1.0) {
-      child = MediaQuery(
-        data: mediaQuery.copyWith(
-          textScaler: textScaler,
-          size: mediaQuery.size / uiScale,
-          padding: tmpPadding ?? mediaQuery.padding / uiScale,
-          viewInsets: mediaQuery.viewInsets / uiScale,
-          viewPadding: tmpPadding ?? mediaQuery.viewPadding / uiScale,
-          devicePixelRatio: mediaQuery.devicePixelRatio * uiScale,
-        ),
-        child: child!,
-      );
-    } else {
-      child = MediaQuery(
-        data: mediaQuery.copyWith(
-          textScaler: textScaler,
-          padding: tmpPadding,
-          viewPadding: tmpPadding,
-        ),
-        child: child!,
-      );
-    }
+    // ScaledWidgetsFlutterBinding 已经把 Pref.uiScale 应用到 ViewConfiguration，
+    // MediaQuery 的 size / devicePixelRatio 因此已经是缩放后的值。
+    // 这里再除一次会导致读取 MediaQuery 的页面（如视频页）只按一半宽度布局，
+    // 同时 devicePixelRatio 被放大，图片按更高分辨率加载，拖慢性能。
+    child = MediaQuery(
+      data: MediaQuery.of(context).copyWith(
+        textScaler: TextScaler.linear(Pref.defaultTextScale),
+        padding: tmpPadding,
+        viewPadding: tmpPadding,
+      ),
+      child: child!,
+    );
     if (PlatformUtils.isDesktop) {
       return BackDetector(
         onBack: _onBack,
