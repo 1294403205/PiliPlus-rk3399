@@ -81,7 +81,7 @@ jobs:
           # 版本号 / 架构 / 运行依赖（Armbian bookworm+ 使用 libgtk-3-0 与 libmpv2）
           sed -i "2s/version_need_change/${version}/g" DEBIAN/control
           sed -i "s/^Architecture: amd64$/Architecture: arm64/" DEBIAN/control
-          sed -i "s/^Depends: .*/Depends: libgtk-3-0 | libgtk-3-0t64, libmpv2, libwebkit2gtk-4.1-0, fonts-noto-cjk/" DEBIAN/control
+          sed -i "s/^Depends: .*/Depends: libgtk-3-0 | libgtk-3-0t64, libmpv2, libwebkit2gtk-4.1-0, fonts-noto-cjk, fonts-noto-color-emoji/" DEBIAN/control
           sed -i "/^         libmpv2$/d" DEBIAN/control
 
           SIZE_KB=$(du -s -b --apparent-size . | awk '{print int($1)}')

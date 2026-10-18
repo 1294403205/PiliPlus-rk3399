@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:PiliPlus/common/style.dart';
 import 'package:PiliPlus/utils/extension/theme_ext.dart';
 import 'package:PiliPlus/utils/font_utils.dart';
@@ -33,7 +35,16 @@ abstract final class ThemeUtils {
     bool isDark = false,
   }) {
     final fontWeight = Pref.appFontWeight;
-    final fontFamily = FontUtils.fontFamily;
+    // Linux 上 Flutter 的自动字体回退在部分环境不可靠，中文会渲染成方块。
+    // 未选择自定义字体时直接用系统 Noto CJK，并显式声明回退字体。
+    final fontFamily =
+        FontUtils.fontFamily ??
+        (Platform.isLinux ? 'Noto Sans CJK SC' : null);
+    const fontFamilyFallback = <String>[
+      'Noto Sans CJK SC',
+      'Noto Sans CJK',
+      'Droid Sans Fallback',
+    ];
 
     TextTheme? textTheme;
     if (fontWeight != .normal) {
@@ -61,6 +72,7 @@ abstract final class ThemeUtils {
       useMaterial3: true,
       colorScheme: colorScheme,
       fontFamily: fontFamily,
+      fontFamilyFallback: fontFamilyFallback,
       textTheme: textTheme,
       appBarTheme: AppBarTheme(
         elevation: 0,
@@ -72,6 +84,7 @@ abstract final class ThemeUtils {
           fontSize: 16,
           fontWeight: fontWeight,
           fontFamily: fontFamily,
+          fontFamilyFallback: fontFamilyFallback,
           color: colorScheme.onSurface,
         ),
       ),
@@ -85,6 +98,7 @@ abstract final class ThemeUtils {
         backgroundColor: colorScheme.secondaryContainer,
         contentTextStyle: TextStyle(
           fontFamily: fontFamily,
+          fontFamilyFallback: fontFamilyFallback,
           fontWeight: fontWeight,
           color: colorScheme.onSecondaryContainer,
         ),
@@ -111,6 +125,7 @@ abstract final class ThemeUtils {
           fontSize: 18,
           fontWeight: fontWeight,
           fontFamily: fontFamily,
+          fontFamilyFallback: fontFamilyFallback,
           color: colorScheme.onSurface,
         ),
         backgroundColor: colorScheme.surface,
@@ -129,6 +144,7 @@ abstract final class ThemeUtils {
           fontSize: 14,
           color: Colors.white,
           fontFamily: fontFamily,
+          fontFamilyFallback: fontFamilyFallback,
           fontWeight: fontWeight,
         ),
         decoration: const BoxDecoration(
