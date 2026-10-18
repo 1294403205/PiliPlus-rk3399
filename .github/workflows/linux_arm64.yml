@@ -1,0 +1,119 @@
+name: Build for Linux arm64
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - ci/linux-arm64
+
+permissions:
+  contents: write
+
+jobs:
+  build-linux-arm64-app:
+    name: Release Linux arm64
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgtk-3-dev \
+            libwebkit2gtk-4.1-dev \
+            libasound2-dev \
+            libmpv-dev \
+            libepoxy-dev \
+            ninja-build \
+            cmake \
+            clang \
+            pkg-config
+        shell: bash
+
+      - name: Setup flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version-file: pubspec.yaml
+          cache: true
+
+      - name: Set and Extract version
+        shell: pwsh
+        run: lib/scripts/build.ps1
+
+      - name: Apply Patch
+        shell: pwsh
+        run: lib/scripts/patch.ps1 Linux
+
+      - name: Build Linux arm64
+        run: flutter build linux --release --dart-define-from-file=pili_release.json --no-pub
+
+      - name: Package .tar.gz
+        shell: bash
+        run: |
+          tar -zcvf "PiliPlus_linux_${version}_arm64.tar.gz" \
+            -C build/linux/arm64/release/bundle .
+
+      - name: Package deb
+        shell: bash
+        run: |
+          PKG="PiliPlus_linux_${version}_arm64"
+          mkdir "$PKG"
+          pushd "$PKG"
+          mkdir -p opt/PiliPlus
+          mkdir -p usr/share/applications
+          mkdir -p usr/share/icons/hicolor/512x512/apps
+
+          cp -r ../build/linux/arm64/release/bundle/* opt/PiliPlus
+          cp -r ../assets/linux/DEBIAN .
+          cp ../assets/linux/com.example.piliplus.desktop usr/share/applications
+          cp ../assets/images/logo/logo.png usr/share/icons/hicolor/512x512/apps/piliplus.png
+
+          # 版本号 / 架构 / 运行依赖（Armbian bookworm+ 使用 libgtk-3-0 与 libmpv2）
+          sed -i "2s/version_need_change/${version}/g" DEBIAN/control
+          sed -i "s/^Architecture: amd64$/Architecture: arm64/" DEBIAN/control
+          sed -i "s/^Depends: libgtk-3-0t64,/Depends: libgtk-3-0 | libgtk-3-0t64,/" DEBIAN/control
+
+          SIZE_KB=$(du -s -b --apparent-size . | awk '{print int($1)}')
+          SIZE_KB=$(($SIZE_KB - $(du -s -b --apparent-size DEBIAN | awk '{print int($1)}')))
+          SIZE_KB=$(echo "$SIZE_KB" | awk '{print int($1/1024 + 0.999)}')
+          sed -i "9s/size_need_change/${SIZE_KB}/g" DEBIAN/control
+
+          md5sum opt/PiliPlus/piliplus >> DEBIAN/md5sums
+          md5sum opt/PiliPlus/lib/* >> DEBIAN/md5sums
+          md5sum opt/PiliPlus/data/icudtl.dat >> DEBIAN/md5sums
+
+          chmod 0644 DEBIAN/control
+          chmod 0644 DEBIAN/md5sums
+          chmod 0755 DEBIAN/postinst
+          chmod 0755 DEBIAN/postrm
+          chmod 0755 DEBIAN/prerm
+
+          popd
+          dpkg-deb --build --verbose --root-owner-group "$PKG"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: PiliPlus_linux_arm64_${{ env.version }}
+          path: |
+            PiliPlus_linux_*_arm64.tar.gz
+            PiliPlus_linux_*_arm64.deb
+          if-no-files-found: error
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          TAG="linux-arm64-${GITHUB_RUN_NUMBER}"
+          gh release create "$TAG" \
+            "PiliPlus_linux_${version}_arm64.tar.gz" \
+            "PiliPlus_linux_${version}_arm64.deb" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "PiliPlus ${version} (Linux arm64)" \
+            --notes "Automated Linux arm64 build of ${GITHUB_SHA} for RK3399 / Ubuntu 26.04-class systems."
