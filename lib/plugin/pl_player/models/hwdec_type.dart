@@ -22,6 +22,10 @@ enum HwDecType {
   nvdecCopy('nvdec-copy', 'NVDEC (NVIDIA独占) (非直通)'),
   drm('drm', 'DRM (Linux)'),
   drmCopy('drm-copy', 'DRM (Linux) (非直通)'),
+  v4l2request('v4l2request', 'V4L2 Request (Linux VPU)'),
+  v4l2requestCopy('v4l2request-copy', 'V4L2 Request (Linux VPU) (非直通)'),
+  v4l2m2m('v4l2m2m', 'V4L2 M2M (Linux VPU)'),
+  v4l2m2mCopy('v4l2m2m-copy', 'V4L2 M2M (Linux VPU) (非直通)'),
   vulkan('vulkan', 'Vulkan (全平台) (实验性)'),
   vulkanCopy('vulkan-copy', 'Vulkan (全平台) (实验性) (非直通)'),
   vdpau('vdpau', 'VDPAU (Linux)'),
@@ -46,5 +50,8 @@ enum HwDecType {
       ? kDebugMode
             ? autoSafe.hwdec
             : [mediacodec.hwdec, autoSafe.hwdec].join(',')
+      : Platform.isLinux
+      // Rockchip VPU (RK3399) 走 V4L2 request API；copy 模式兼容 render API
+      ? v4l2requestCopy.hwdec
       : auto.hwdec;
 }
