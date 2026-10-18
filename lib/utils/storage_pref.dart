@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui' show PlatformDispatcher;
 
 import 'package:PiliPlus/common/widgets/gesture/horizontal_drag_gesture_recognizer.dart'
     show deviceTouchSlop;
@@ -683,7 +684,17 @@ abstract final class Pref {
       _setting.get(SettingBoxKey.defaultTextScale, defaultValue: 1.0);
 
   static double get uiScale =>
-      _setting.get(SettingBoxKey.uiScale, defaultValue: 1.0);
+      _setting.get(SettingBoxKey.uiScale, defaultValue: _defaultUiScale);
+
+  /// 4K 屏（逻辑宽度 >= 3000）默认 2 倍缩放，避免元素过小；
+  /// 系统已做缩放（devicePixelRatio > 1）时不再重复放大。
+  static double get _defaultUiScale {
+    if (!Platform.isLinux) return 1.0;
+    final view = PlatformDispatcher.instance.implicitView;
+    if (view == null || view.devicePixelRatio == 0) return 1.0;
+    final logicalWidth = view.physicalSize.width / view.devicePixelRatio;
+    return logicalWidth >= 3000 ? 2.0 : 1.0;
+  }
 
   static bool get dynamicsWaterfallFlow => _setting.get(
     SettingBoxKey.dynamicsWaterfallFlow,
